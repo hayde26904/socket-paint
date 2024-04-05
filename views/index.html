@@ -7,6 +7,8 @@
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <div id="ghostCellBackground"></div>
+    <div id="ghostCell"></div>
     <script src="static/js/socket.io.js"></script>
     <script src="static/js/index.js"></script>
     <style>
@@ -21,6 +23,16 @@
             left: 50%;
             transform: translateX(-50%);
             border: #000 10px;
+        }
+
+        #ghostCell {
+            position: absolute;
+        }
+
+        #ghostCellBackground {
+            position: absolute;
+            background-color: #FFF;
+            visibility: hidden;
         }
     </style>
 </body>

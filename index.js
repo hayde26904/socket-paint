@@ -2,20 +2,20 @@ let express = require('express');
 let app = express();
 let serv = require('http').Server(app);
 
-let cols = 75;
-let rows = 37;
+let cols = 150;
+let rows = 75;
 
 let colors = {
     0: 'white',
     1: 'black',
     2: 'red',
-    3: 'green',
-    4: 'blue',
+    3: '#19f505',
+    4: '#056df5',
     5: 'yellow',
     6: 'orange',
-    7: 'brown',
-    8: 'pink',
-    9: 'purple'
+    7: '#915200',
+    8: 'purple',
+    9: 'white'
 }
 
 let defaultColor = 1;
@@ -41,7 +41,7 @@ app.get('/', function(req, res) {
 app.use('/', express.static(__dirname + '/'));
 
 
-serv.listen(80);
+serv.listen(2000);
 console.log("Server Started");
 
 function randomColor() {

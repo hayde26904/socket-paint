@@ -4,13 +4,21 @@ let ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+let ghostCell = document.getElementById('ghostCell');
+let ghostCellBackground = document.getElementById('ghostCellBackground');
+
 let cols;
 let rows;
 let cellW;
 let cellH;
 let colors;
 
-let currentColor = 1;
+let ghostCellX;
+let ghostCellY;
+let ghostCellW;
+let ghostCellH;
+
+let currentColorNum = 1;
 
 let board;
 
@@ -21,13 +29,20 @@ socket.on('init', function (data) {
     rows = data.rows;
     colors = data.colors
     board = data.board;
-    currentColor = data.defaultColor;
+    currentColorNum = data.defaultColor;
     cellW = canvas.width / cols;
     cellH = canvas.height / rows;
+    ghostCellW = cellW - gridLinesThickness;
+    ghostCellH = cellH - gridLinesThickness;
+    ghostCell.style.width = ghostCellW + 'px';
+    ghostCell.style.height = ghostCellH + 'px';
+    ghostCellBackground.style.width = ghostCellW + 'px';
+    ghostCellBackground.style.height = ghostCellH + 'px';
+    ghostCell.style.backgroundColor = colors[currentColorNum];
     initialized = true;
 
     drawBoard();
-    setInterval(update, 1000 / 16);
+    setInterval(update, 1000 / 60);
 });
 
 let colorKeys = '123456789';
@@ -36,12 +51,19 @@ let mouseCellX = 0;
 let mouseCellY = 0;
 
 let gridLinesColor = '#000';
+let gridLinesThickness = 1;
 
 window.onresize = function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     cellW = canvas.width / cols;
     cellH = canvas.height / rows;
+    ghostCellW = cellW - gridLinesThickness;
+    ghostCellH = cellH - gridLinesThickness;
+    ghostCell.style.width = ghostCellW + 'px';
+    ghostCell.style.height = ghostCellH + 'px';
+    ghostCellBackground.style.width = ghostCellW + 'px';
+    ghostCellBackground.style.height = ghostCellH + 'px';
     drawBoard();
 }
 
@@ -58,25 +80,25 @@ function drawBoard() {
     }
 }
 
-function placeCell(c, x, y) {
-    ctx.fillStyle = c;
-    board[y][x] = c;
+function placeCell(x,y, cnum) {
+    ctx.fillStyle = colors[cnum];
+    board[y][x] = cnum;
 }
 
 function update() {
-
 }
 
 socket.on('placeCell', function (data) {
     if (data.placerID != socket.id) {
-        placeCell(data.color, data.x, data.y);
+        placeCell(data.x, data.y, data.color);
         drawBoard();
     }
 });
 
 document.addEventListener('keydown', function (event) {
     if(colorKeys.includes(event.key)){
-        currentColor = Number(event.key);
+        currentColorNum = Number(event.key);
+        ghostCell.style.backgroundColor = colors[currentColorNum];
     }
 });
 
@@ -85,14 +107,22 @@ document.addEventListener('mousemove', function (event) {
     mouseCellX = Math.floor(event.clientX / cellW);
     mouseCellY = Math.floor(event.clientY / cellH);
 
+    ghostCellX = Math.floor(mouseCellX * cellW) + gridLinesThickness;
+    ghostCellY = Math.floor(mouseCellY * cellH) + gridLinesThickness;
+
+    ghostCell.style.left = ghostCellX + 'px';
+    ghostCell.style.top = ghostCellY + 'px';
+    ghostCellBackground.style.left = ghostCellX + 'px';
+    ghostCellBackground.style.top = ghostCellY + 'px';
+    
 });
 
 document.addEventListener('click', function (event) {
-    placeCell(currentColor, mouseCellX, mouseCellY);
+    placeCell(mouseCellX, mouseCellY, currentColorNum);
     drawBoard();
     socket.emit('cellPlaced', {
         placerID: socket.id,
-        color: currentColor,
+        color: currentColorNum,
         x: mouseCellX,
         y: mouseCellY,
         board: board
