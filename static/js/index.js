@@ -18,6 +18,9 @@ let ghostCellY;
 let ghostCellW;
 let ghostCellH;
 
+let placed = false;
+let mouseDown = false;
+
 let currentColorNum = 1;
 
 let board;
@@ -36,8 +39,6 @@ socket.on('init', function (data) {
     ghostCellH = cellH - gridLinesThickness;
     ghostCell.style.width = ghostCellW + 'px';
     ghostCell.style.height = ghostCellH + 'px';
-    ghostCellBackground.style.width = ghostCellW + 'px';
-    ghostCellBackground.style.height = ghostCellH + 'px';
     ghostCell.style.backgroundColor = colors[currentColorNum];
     initialized = true;
 
@@ -49,9 +50,13 @@ let colorKeys = '123456789';
 
 let mouseCellX = 0;
 let mouseCellY = 0;
+let oldMouseCellX = 0;
+let oldMouseCellY = 0;
 
 let gridLinesColor = '#000';
 let gridLinesThickness = 1;
+
+let gridEnabled = false;
 
 window.onresize = function () {
     canvas.width = window.innerWidth;
@@ -62,8 +67,6 @@ window.onresize = function () {
     ghostCellH = cellH - gridLinesThickness;
     ghostCell.style.width = ghostCellW + 'px';
     ghostCell.style.height = ghostCellH + 'px';
-    ghostCellBackground.style.width = ghostCellW + 'px';
-    ghostCellBackground.style.height = ghostCellH + 'px';
     drawBoard();
 }
 
@@ -75,7 +78,7 @@ function drawBoard() {
             ctx.fillStyle = colors[cell];
             ctx.strokeStyle = gridLinesColor;
             ctx.fillRect(col * cellW, row * cellH, cellW, cellH);
-            ctx.strokeRect(col * cellW, row * cellH, cellW, cellH);
+            if(gridEnabled) ctx.strokeRect(col * cellW, row * cellH, cellW, cellH);
         }
     }
 }
@@ -83,15 +86,26 @@ function drawBoard() {
 function placeCell(x,y, cnum) {
     ctx.fillStyle = colors[cnum];
     board[y][x] = cnum;
+    ctx.fillRect(x * cellW, y * cellH, cellW, cellH)
 }
 
 function update() {
+    if(!placed && mouseDown){
+        placeCell(mouseCellX, mouseCellY, currentColorNum);
+        placed = true;
+        socket.emit('cellPlaced', {
+            placerID: socket.id,
+            color: currentColorNum,
+            x: mouseCellX,
+            y: mouseCellY,
+            board: board
+        });
+    }
 }
 
 socket.on('placeCell', function (data) {
     if (data.placerID != socket.id) {
         placeCell(data.x, data.y, data.color);
-        drawBoard();
     }
 });
 
@@ -99,13 +113,23 @@ document.addEventListener('keydown', function (event) {
     if(colorKeys.includes(event.key)){
         currentColorNum = Number(event.key);
         ghostCell.style.backgroundColor = colors[currentColorNum];
+    } else if(event.key == 'g'){
+        gridEnabled = !gridEnabled;
+        drawBoard();
     }
 });
 
 document.addEventListener('mousemove', function (event) {
 
+    oldMouseCellX = mouseCellX;
+    oldMouseCellY = mouseCellY;
+
     mouseCellX = Math.floor(event.clientX / cellW);
     mouseCellY = Math.floor(event.clientY / cellH);
+
+    if(oldMouseCellX != mouseCellX || oldMouseCellY != mouseCellY){
+        placed = false;
+    }
 
     ghostCellX = Math.floor(mouseCellX * cellW) + gridLinesThickness;
     ghostCellY = Math.floor(mouseCellY * cellH) + gridLinesThickness;
@@ -117,14 +141,10 @@ document.addEventListener('mousemove', function (event) {
     
 });
 
-document.addEventListener('click', function (event) {
-    placeCell(mouseCellX, mouseCellY, currentColorNum);
-    drawBoard();
-    socket.emit('cellPlaced', {
-        placerID: socket.id,
-        color: currentColorNum,
-        x: mouseCellX,
-        y: mouseCellY,
-        board: board
-    });
+document.addEventListener('mousedown', function (event) {
+    mouseDown = true;
+});
+
+document.addEventListener('mouseup', function (event) {
+    mouseDown = false;
 });
