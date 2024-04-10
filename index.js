@@ -2,6 +2,8 @@ let express = require('express');
 let app = express();
 let serv = require('http').Server(app);
 
+//let ip = require('ip');
+
 let cols = 150;
 let rows = 75;
 
@@ -19,6 +21,14 @@ let colors = {
 }
 
 let defaultColor = 1;
+
+let clearVoteTimeSeconds = 30;
+let clearVoteInProgress = false;
+
+let clearInFavor = 0;
+let clearVotes = 0;
+
+let clearVoteTimeRemaining = clearVoteTimeSeconds;
 
 function filledBoard(fill, cols, rows){
     let arr = [];
@@ -38,17 +48,24 @@ app.get('/', function(req, res) {
     res.sendFile(__dirname + "/views/index.html");
 });
 
+app.get('/admin', function(req, res) {
+    res.sendFile(__dirname + "/views/admin.html");
+});
 app.use('/', express.static(__dirname + '/'));
 
 
-serv.listen(2000);
-console.log("Server Started");
+const PORT = 3000;
+const HOST = '0.0.0.0';
+
+serv.listen(PORT);
+console.log('Server Running!');
 
 function randomColor() {
     return "rgb(" + Math.floor(Math.random() * 256) + "," + Math.floor(Math.random() * 256) + "," + Math.floor(Math.random() * 256) + ")";
 }
 
 let io = require('socket.io')(serv, {});
+const os = require('os');
 io.sockets.on('connection', function(socket) {
     console.log("SOCKET CONNECTION");
     socket.emit('init', {
@@ -56,7 +73,34 @@ io.sockets.on('connection', function(socket) {
         cols: cols,
         rows: rows,
         colors: colors,
-        defaultColor: defaultColor
+        defaultColor: defaultColor,
+        clientsCount: io.engine.clientsCount
+    });
+
+    io.emit("updateClientCount", {
+        clientsCount: io.engine.clientsCount
+    });
+
+    socket.on('startClearVote', function(){
+        //if(!clearVoteInProgress){
+            io.emit('clearVoteStarted', {
+                clientsCount: io.engine.clientsCount
+            });
+            clearVoteInProgress = true;
+            let clearVoteTimer = setInterval(clearVoteCountDown, 1000);
+        // i dont know what this is for but it was in the original code so i will keep it here for now UNTIL I KILL THE GOVERNMENT AND TAKE OVER THE WORLD
+    });
+
+    socket.on('clearVotePlaced', function(data){
+        clearVotes++;
+        if(data.inFavor){
+            clearInFavor++;
+        }
+
+        io.emit('clearVoteUpdate', {
+            votes: clearVotes,
+            clientsCount: io.engine.clientsCount
+        });
     });
 
     socket.on('cellPlaced', function(data){
@@ -72,5 +116,27 @@ io.sockets.on('connection', function(socket) {
 
     socket.on('disconnect', function(){
         console.log("SOCKET DISCONNECT");
+        io.emit("updateClientCount", {
+            clientsCount: io.engine.clientsCount
+        });
     });
 });
+
+function clearVoteCountDown(){
+    clearVoteTimeRemaining--;
+    /*io.emit('clearVoteTimeRemaining', {
+        time: clearVoteTimeRemaining
+    });*/
+    if(clearVoteTimeRemaining <= 0){
+        clearVoteInProgress = false;
+        clearInterval(clearVoteTimer);
+        clearVoteTimeRemaining = clearVoteTimeSeconds;
+        io.emit('clearVoteEnded', {});
+
+        //clears board bro
+        board = filledBoard(0, cols, rows);
+        io.emit('updateBoard', {
+            board: board
+        });
+    }
+}

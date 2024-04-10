@@ -1,11 +1,21 @@
 let socket = io();
 let canvas = document.getElementById('canvas');
 let ctx = canvas.getContext('2d');
+
+//I wnat to  live but 
+
+let canvasYOffset = (window.innerHeight * 0.04);
 canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.height = window.innerHeight - canvasYOffset;
 
 let ghostCell = document.getElementById('ghostCell');
 let ghostCellBackground = document.getElementById('ghostCellBackground');
+
+let paintersOnlineText = document.getElementById('paintersOnlineText');
+
+let clearVoteBtn = document.getElementById('startClearVoteBtn');
+let clearVoteControls = document.getElementById('clearVoteControls');
+
 
 let cols;
 let rows;
@@ -25,6 +35,9 @@ let currentColorNum = 1;
 
 let board;
 
+let ben = new Image();
+ben.src = "static/img/bennyboy.jpg";
+
 let initialized = false;
 
 socket.on('init', function (data) {
@@ -35,11 +48,12 @@ socket.on('init', function (data) {
     currentColorNum = data.defaultColor;
     cellW = canvas.width / cols;
     cellH = canvas.height / rows;
-    ghostCellW = cellW - gridLinesThickness;
-    ghostCellH = cellH - gridLinesThickness;
+    ghostCellW = cellW;
+    ghostCellH = cellH;
     ghostCell.style.width = ghostCellW + 'px';
     ghostCell.style.height = ghostCellH + 'px';
     ghostCell.style.backgroundColor = colors[currentColorNum];
+    paintersOnlineText.innerHTML = `Painters Online: ${data.clientsCount}`;
     initialized = true;
 
     drawBoard();
@@ -56,15 +70,15 @@ let oldMouseCellY = 0;
 let gridLinesColor = '#000';
 let gridLinesThickness = 1;
 
-let gridEnabled = false;
+let gridEnabled = true;
 
 window.onresize = function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     cellW = canvas.width / cols;
     cellH = canvas.height / rows;
-    ghostCellW = cellW - gridLinesThickness;
-    ghostCellH = cellH - gridLinesThickness;
+    ghostCellW = cellW;
+    ghostCellH = cellH;
     ghostCell.style.width = ghostCellW + 'px';
     ghostCell.style.height = ghostCellH + 'px';
     drawBoard();
@@ -84,9 +98,20 @@ function drawBoard() {
 }
 
 function placeCell(x,y, cnum) {
+    let cellX = x * cellW;
+    let cellY = y * cellH;
     ctx.fillStyle = colors[cnum];
     board[y][x] = cnum;
-    ctx.fillRect(x * cellW, y * cellH, cellW, cellH)
+    ctx.fillRect(cellX, cellY, cellW, cellH)
+    ctx.strokeStyle = gridLinesColor;
+    if(gridEnabled) ctx.strokeRect(cellX, cellY, cellW, cellH);
+}
+
+function startClearVote(){
+    socket.emit('startClearVote', {});
+}
+
+function clearVote(inFavor){
 }
 
 function update() {
@@ -101,6 +126,7 @@ function update() {
             board: board
         });
     }
+    console.log(mouseCellX);
 }
 
 socket.on('placeCell', function (data) {
@@ -109,15 +135,45 @@ socket.on('placeCell', function (data) {
     }
 });
 
+socket.on('updateClientCount', function (data) {
+    paintersOnlineText.innerHTML = `Painters Online: ${data.clientsCount}`;
+});
+
+socket.on('clearVoteStarted', function(data){
+    clearVoteBtn.style.display = 'none';
+    clearVoteControls.style.display = 'inline';
+});
+
+socket.on('clearVoteUpdate', function(data){
+    clearVoteText = `Clear Vote: ${data.votes}/${data.clientsCount}`;
+});
+
+socket.on('clearVoteEnded', function(data){
+    clearVoteBtn.style.display = 'inline';
+    clearVoteControls.style.display = 'none';
+    clearVoteText = `Clear Vote: 0/${data.clientsCount}`;
+});
+
+socket.on('updateBoard', function(data){
+    board = data.board;
+    drawBoard();
+});
+
 document.addEventListener('keydown', function (event) {
     if(colorKeys.includes(event.key)){
         currentColorNum = Number(event.key);
         ghostCell.style.backgroundColor = colors[currentColorNum];
     } else if(event.key == 'g'){
-        gridEnabled = !gridEnabled;
-        drawBoard();
+        //gridEnabled = !gridEnabled;
+        //drawBoard();
     }
 });
+
+//I know this is bad practice but I'm lazy and this is a small project so Ise number keys to change color.'m not going to bother with a better solution
+//I'm sorry for my sins but I'm not sorry enough to fix them :( - Ben
+//I want to die - Ben
+//I'm sorry for my sins but I'm not sorry enough to fix them :( - Ben
+//i kicked ben from the server - ben
 
 document.addEventListener('mousemove', function (event) {
 
@@ -131,8 +187,8 @@ document.addEventListener('mousemove', function (event) {
         placed = false;
     }
 
-    ghostCellX = Math.floor(mouseCellX * cellW) + gridLinesThickness;
-    ghostCellY = Math.floor(mouseCellY * cellH) + gridLinesThickness;
+    ghostCellX = mouseCellX * cellW;
+    ghostCellY = mouseCellY * cellH + canvasYOffset;
 
     ghostCell.style.left = ghostCellX + 'px';
     ghostCell.style.top = ghostCellY + 'px';

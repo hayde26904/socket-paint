@@ -6,6 +6,16 @@
     <title>Document</title>
 </head>
 <body>
+    <p id="paintersOnlineText" class="infoText">Painters Online: 0</p>
+    <p id="controlsText" class="infoText">Use number keys to change color.</p>
+    <div id="clearVoteContainer">
+        <button id="startClearVoteBtn" onclick="startClearVote()">Start Clear Vote</button>
+        <div id="clearVoteControls">
+            <p id="clearVoteText" class="infoText">Clear Vote: 0/0</p>&nbsp;&nbsp;
+            <button id="thumbUpBtn" onclick="clearVote(true)">&#128077;</button>
+            <button id="thumbDownBtn" onclick="clearVote(false)">&#128078;</button>
+        </div>
+    </div>
     <canvas id="canvas"></canvas>
     <div id="ghostCellBackground"></div>
     <div id="ghostCell"></div>
@@ -17,9 +27,26 @@
             overflow: hidden;
         }
 
+        html:hover {
+            cursor: none;
+        }
+
+        .infoText {
+            margin: 0px;
+            display: inline;
+            user-select: none;
+        }
+
+        #controlsText {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
         #canvas {
             position: absolute;
-            top: 0px;
+            top: 4%;
             left: 50%;
             transform: translateX(-50%);
             border: #000 10px;
@@ -27,6 +54,23 @@
 
         #ghostCell {
             position: absolute;
+        }
+
+        #clearVoteContainer {
+            display: inline;
+            float: right;
+        }
+
+        #clearVoteText {
+            
+        }
+
+        #startClearVoteBtn {
+            
+        }
+
+        #clearVoteControls {
+            display: none;
         }
     </style>
 </body>
