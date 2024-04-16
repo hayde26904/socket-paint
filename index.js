@@ -22,19 +22,23 @@ let colors = {
 
 let defaultColor = 1;
 
-let clearVoteTimeSeconds = 30;
+let clearVoteTimeSeconds = 10;
 let clearVoteInProgress = false;
 
 let clearInFavor = 0;
 let clearVotes = 0;
 
+let voters = [];
+
+let clearVoteTimer;
+
 let clearVoteTimeRemaining = clearVoteTimeSeconds;
 
-function filledBoard(fill, cols, rows){
+function filledBoard(fill, cols, rows) {
     let arr = [];
-    for(let row = 0; row < rows; row++){
+    for (let row = 0; row < rows; row++) {
         arr.push([]);
-        for(let col = 0; col < cols; col++){
+        for (let col = 0; col < cols; col++) {
             arr[row][col] = fill;
         }
     }
@@ -44,11 +48,11 @@ function filledBoard(fill, cols, rows){
 
 let board = filledBoard(0, cols, rows);
 
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
     res.sendFile(__dirname + "/views/index.html");
 });
 
-app.get('/admin', function(req, res) {
+app.get('/admin', function (req, res) {
     res.sendFile(__dirname + "/views/admin.html");
 });
 app.use('/', express.static(__dirname + '/'));
@@ -66,45 +70,69 @@ function randomColor() {
 
 let io = require('socket.io')(serv, {});
 const os = require('os');
-io.sockets.on('connection', function(socket) {
+io.sockets.on('connection', function (socket) {
     console.log("SOCKET CONNECTION");
+
     socket.emit('init', {
         board: board,
         cols: cols,
         rows: rows,
         colors: colors,
         defaultColor: defaultColor,
-        clientsCount: io.engine.clientsCount
+        clientsCount: io.engine.clientsCount,
     });
+
+    if (clearVoteInProgress) {
+        socket.emit('clearVoteStarted', {
+            votes: clearVotes,
+            clientsCount: io.engine.clientsCount
+        });
+    }
 
     io.emit("updateClientCount", {
         clientsCount: io.engine.clientsCount
     });
 
-    socket.on('startClearVote', function(){
+    if (clearVoteInProgress) {
+        socket.emit('updateClearVote', {
+
+        });
+    }
+
+    socket.on('startClearVote', function () {
         //if(!clearVoteInProgress){
-            io.emit('clearVoteStarted', {
-                clientsCount: io.engine.clientsCount
-            });
-            clearVoteInProgress = true;
-            let clearVoteTimer = setInterval(clearVoteCountDown, 1000);
-        // i dont know what this is for but it was in the original code so i will keep it here for now UNTIL I KILL THE GOVERNMENT AND TAKE OVER THE WORLD
-    });
-
-    socket.on('clearVotePlaced', function(data){
-        clearVotes++;
-        if(data.inFavor){
-            clearInFavor++;
-        }
-
-        io.emit('clearVoteUpdate', {
-            votes: clearVotes,
+        io.emit('clearVoteStarted', {
+            votes: 0,
             clientsCount: io.engine.clientsCount
         });
+        clearVoteInProgress = true;
+        clearVoteTimer = setInterval(clearVoteCountDown, 1000);
+        // i dont know what this is for but it was in the original code so i will keep it here for now UNTIL I KILL THE GOVERNMENT AND TAKE OVER THE WORLD
+        // I WILL THEN REMOVE THIS CODE AND REPLACE IT WITH MY OWN CODE THAT WILL BE BETTER THAN THIS CODE AND WILL BE THE BEST CODE IN THE WORLD AND NO ONE WILL BE ABLE TO STOP ME
+        // I WILL THEN RULE THE WORLD WITH AN IRON FIST AND NO ONE WILL BE ABLE TO STOP ME AND I WILL BE THE KING OF THE WORLD AND NO ONE WILL BE ABLE TO STOP ME
+        //AND THE GOVERMENT WILL BE DESTROYED AND I WILL BE THE KING OF THE WORLD AND NO ONE WILL BE ABLE TO STOP ME AND I WILL RULE THE WORLD WITH AN IRON FIST
     });
 
-    socket.on('cellPlaced', function(data){
-        console.log(`Cell placed at X: ${data.x}  Y: ${data.y}  of Color: ${data.color}  by Socket ID: ${data.placerID}`);
+    socket.on('clearVotePlaced', function (data) {
+        if (!voters.includes(data.voterID)) {
+            clearVotes++;
+            voters.push(data.voterID);
+
+            if (data.inFavor) {
+                clearInFavor++;
+            }
+
+            console.log(`clear vote placed. Stance: ${data.inFavor}`);
+
+            io.emit('clearVoteUpdate', {
+                votes: clearVotes,
+                clientsCount: io.engine.clientsCount
+            });
+        }
+    });
+
+    socket.on('cellPlaced', function (data) {
+        //console.log(`Cell placed at X: ${data.x}  Y: ${data.y}  of Color: ${data.color}  by Socket ID: ${data.placerID}`);
         board = data.board;
         io.emit('placeCell', {
             placerID: data.placerID,
@@ -114,7 +142,7 @@ io.sockets.on('connection', function(socket) {
         });
     });
 
-    socket.on('disconnect', function(){
+    socket.on('disconnect', function () {
         console.log("SOCKET DISCONNECT");
         io.emit("updateClientCount", {
             clientsCount: io.engine.clientsCount
@@ -122,21 +150,33 @@ io.sockets.on('connection', function(socket) {
     });
 });
 
-function clearVoteCountDown(){
+function clearVoteCountDown() {
+    console.log(`vote time remaining: ${clearVoteTimeRemaining}`);
     clearVoteTimeRemaining--;
     /*io.emit('clearVoteTimeRemaining', {
         time: clearVoteTimeRemaining
     });*/
-    if(clearVoteTimeRemaining <= 0){
+    if (clearVoteTimeRemaining <= 0) {
+
         clearVoteInProgress = false;
         clearInterval(clearVoteTimer);
         clearVoteTimeRemaining = clearVoteTimeSeconds;
-        io.emit('clearVoteEnded', {});
+        voters = [];
 
-        //clears board bro
-        board = filledBoard(0, cols, rows);
-        io.emit('updateBoard', {
-            board: board
+        let clearVoteResult = (clearInFavor / clearVotes) >= 0.5;
+
+        io.emit('clearVoteEnded', {
+            result: clearVoteResult
         });
+        console.log(`vote ended with result: ${clearVoteResult}`);
+        clearVotes = 0;
+        clearInFavor = 0;
+
+        if (clearVoteResult) {
+            board = filledBoard(0, cols, rows);
+            io.emit('updateBoard', {
+                board: board
+            });
+        }
     }
 }

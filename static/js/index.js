@@ -13,8 +13,10 @@ let ghostCellBackground = document.getElementById('ghostCellBackground');
 
 let paintersOnlineText = document.getElementById('paintersOnlineText');
 
-let clearVoteBtn = document.getElementById('startClearVoteBtn');
-let clearVoteControls = document.getElementById('clearVoteControls');
+let startClearVoteBtn = document.getElementById('startClearVoteBtn');
+let clearVoteUI = document.getElementById('clearVoteUI');
+let votesText = document.getElementById('votesText');
+let voteBtns = document.getElementsByClassName('voteBtns');
 
 
 let cols;
@@ -111,7 +113,11 @@ function startClearVote(){
     socket.emit('startClearVote', {});
 }
 
-function clearVote(inFavor){
+function placeClearVote(inFavor){
+    socket.emit('clearVotePlaced', {
+        inFavor: inFavor,
+        voterID: socket.id
+    });
 }
 
 function update() {
@@ -140,18 +146,22 @@ socket.on('updateClientCount', function (data) {
 });
 
 socket.on('clearVoteStarted', function(data){
-    clearVoteBtn.style.display = 'none';
-    clearVoteControls.style.display = 'inline';
+    startClearVoteBtn.classList.add('hidden');
+    clearVoteUI.classList.remove('hidden');
+    votesText.innerHTML = `Clear Vote: ${data.votes}/${data.clientsCount}`;
 });
 
 socket.on('clearVoteUpdate', function(data){
-    clearVoteText = `Clear Vote: ${data.votes}/${data.clientsCount}`;
+    votesText.innerHTML = `Clear Vote: ${data.votes}/${data.clientsCount}`;
 });
 
 socket.on('clearVoteEnded', function(data){
-    clearVoteBtn.style.display = 'inline';
-    clearVoteControls.style.display = 'none';
-    clearVoteText = `Clear Vote: 0/${data.clientsCount}`;
+    votesText.innerHTML = (data.result) ? "Clear Vote Successful." : "Clear Vote Failed.";
+    setTimeout(function(){
+        clearVoteUI.classList.add('hidden');
+        startClearVoteBtn.classList.remove('hidden');
+        //clearVoteText = `Clear Vote: 0/${data.clientsCount}`;
+    }, 2000);
 });
 
 socket.on('updateBoard', function(data){
