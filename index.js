@@ -29,6 +29,7 @@ let clearInFavor = 0;
 let clearVotes = 0;
 
 let voters = [];
+let IPs = [];
 
 let clearVoteTimer;
 
@@ -49,7 +50,12 @@ function filledBoard(fill, cols, rows) {
 let board = filledBoard(0, cols, rows);
 
 app.get('/', function (req, res) {
-    res.sendFile(__dirname + "/views/index.html");
+    console.log(`Req by ${req.ip}`);
+    if(!IPs.includes(req.ip)){
+        res.sendFile(__dirname + "/views/index.html");
+    } else {
+        res.sendFile(__dirname + "/views/alreadyloggedin.html");
+    }
 });
 
 app.get('/admin', function (req, res) {
@@ -72,6 +78,8 @@ let io = require('socket.io')(serv, {});
 const os = require('os');
 io.sockets.on('connection', function (socket) {
     console.log("SOCKET CONNECTION");
+
+    IPs.push(socket.handshake.address)
 
     socket.emit('init', {
         board: board,
@@ -144,6 +152,8 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('disconnect', function () {
         console.log("SOCKET DISCONNECT");
+        let IpIndex = IPs.indexOf(socket.ip);
+        IPs.splice(IpIndex, 1);
         io.emit("updateClientCount", {
             clientsCount: io.engine.clientsCount
         });
@@ -180,3 +190,7 @@ function clearVoteCountDown() {
         }
     }
 }
+
+setInterval(function(){
+    console.log(IPs);
+}, 1000);

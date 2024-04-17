@@ -173,6 +173,7 @@ document.addEventListener('keydown', function (event) {
     if(colorKeys.includes(event.key)){
         currentColorNum = Number(event.key);
         ghostCell.style.backgroundColor = colors[currentColorNum];
+        placed = false;
     } else if(event.key == 'g'){
         //gridEnabled = !gridEnabled;
         //drawBoard();
