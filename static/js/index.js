@@ -18,6 +18,8 @@ let clearVoteUI = document.getElementById('clearVoteUI');
 let votesText = document.getElementById('votesText');
 let voteBtns = document.getElementsByClassName('voteBtns');
 
+let VIPClearBtn = document.getElementById('VIPClearBtn');
+
 
 let cols;
 let rows;
@@ -32,6 +34,8 @@ let ghostCellH;
 
 let placed = false;
 let mouseDown = false;
+
+let isVIP = false;
 
 let currentColorNum = 1;
 
@@ -56,6 +60,9 @@ socket.on('init', function (data) {
     ghostCell.style.height = ghostCellH + 'px';
     ghostCell.style.backgroundColor = colors[currentColorNum];
     paintersOnlineText.innerHTML = `Painters Online: ${data.clientsCount}`;
+
+    isVIP = data.isVIP;
+
     initialized = true;
 
     drawBoard();
@@ -133,6 +140,14 @@ function update() {
         });
     }
     console.log(mouseCellX);
+}
+
+function VIPClear(){
+    if(isVIP){
+        socket.emit('VIPClear', {});
+    } else {
+        alert('Give me gum and I will make you VIP');
+    }
 }
 
 socket.on('placeCell', function (data) {

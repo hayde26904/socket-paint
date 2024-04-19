@@ -30,6 +30,10 @@ let clearVotes = 0;
 
 let voters = [];
 let IPs = [];
+let whitelist = [
+    '172.16.1.104',
+    '172.16.1.189'
+];
 
 let clearVoteTimer;
 
@@ -50,21 +54,15 @@ function filledBoard(fill, cols, rows) {
 let board = filledBoard(0, cols, rows);
 
 app.get('/', function (req, res) {
-    console.log(`Req by ${req.ip}`);
-    if(!IPs.includes(req.ip)){
-        res.sendFile(__dirname + "/views/index.html");
-    } else {
-        res.sendFile(__dirname + "/views/alreadyloggedin.html");
-    }
+    res.sendFile(__dirname + "/views/index.html");
 });
-
-app.get('/admin', function (req, res) {
-    res.sendFile(__dirname + "/views/admin.html");
+app.get('/funny', function(req, res){
+    res.sendFile(__dirname + "/views/page.html");
 });
 app.use('/', express.static(__dirname + '/'));
 
 
-const PORT = 3000;
+const PORT = 80;
 const HOST = '0.0.0.0';
 
 serv.listen(PORT);
@@ -79,7 +77,14 @@ const os = require('os');
 io.sockets.on('connection', function (socket) {
     console.log("SOCKET CONNECTION");
 
-    IPs.push(socket.handshake.address)
+    socket.IP = socket.handshake.address.replace('::ffff:', '');
+
+    if(IPs.includes(socket.IP)){
+        socket.disconnect();
+        return;
+    }
+
+    IPs.push(socket.IP)
 
     socket.emit('init', {
         board: board,
@@ -88,6 +93,7 @@ io.sockets.on('connection', function (socket) {
         colors: colors,
         defaultColor: defaultColor,
         clientsCount: io.engine.clientsCount,
+        isVIP: whitelist.includes(socket.IP),
     });
 
     if (clearVoteInProgress) {
@@ -140,7 +146,7 @@ io.sockets.on('connection', function (socket) {
     });
 
     socket.on('cellPlaced', function (data) {
-        //console.log(`Cell placed at X: ${data.x}  Y: ${data.y}  of Color: ${data.color}  by Socket ID: ${data.placerID}`);
+        console.log(`Cell placed at X: ${data.x}  Y: ${data.y}  of Color: ${data.color}  by Socket ID: ${data.placerID}`);
         board = data.board;
         io.emit('placeCell', {
             placerID: data.placerID,
@@ -150,9 +156,18 @@ io.sockets.on('connection', function (socket) {
         });
     });
 
+    socket.on("VIPClear", function () {
+        if(whitelist.includes(socket.IP)){
+            board = filledBoard(0, cols, rows);
+            io.emit('updateBoard', {
+                board: board
+            });
+        }
+    });
+
     socket.on('disconnect', function () {
         console.log("SOCKET DISCONNECT");
-        let IpIndex = IPs.indexOf(socket.ip);
+        let IpIndex = IPs.indexOf(socket.IP);
         IPs.splice(IpIndex, 1);
         io.emit("updateClientCount", {
             clientsCount: io.engine.clientsCount
@@ -178,6 +193,7 @@ function clearVoteCountDown() {
         io.emit('clearVoteEnded', {
             result: clearVoteResult
         });
+        
         console.log(`vote ended with result: ${clearVoteResult}`);
         clearVotes = 0;
         clearInFavor = 0;
@@ -190,7 +206,3 @@ function clearVoteCountDown() {
         }
     }
 }
-
-setInterval(function(){
-    console.log(IPs);
-}, 1000);
