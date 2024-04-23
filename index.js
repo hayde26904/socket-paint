@@ -28,11 +28,16 @@ let clearVoteInProgress = false;
 let clearInFavor = 0;
 let clearVotes = 0;
 
+let VIPClearCooldownTime = 10;
+
+let serverTime = 0;
+
 let voters = [];
 let IPs = [];
 let whitelist = [
     '172.16.1.104',
-    '172.16.1.189'
+    '172.16.1.189',
+    '172.16.1.226'
 ];
 
 let clearVoteTimer;
@@ -85,6 +90,8 @@ io.sockets.on('connection', function (socket) {
     }
 
     IPs.push(socket.IP)
+
+    socket.VIPClearTime = 0;
 
     socket.emit('init', {
         board: board,
@@ -157,11 +164,15 @@ io.sockets.on('connection', function (socket) {
     });
 
     socket.on("VIPClear", function () {
-        if(whitelist.includes(socket.IP)){
+
+        // I really should switch the clear vote countdown to use this system too for consistency but I really don't feel like it right now.
+        if(whitelist.includes(socket.IP) && (serverTime - socket.VIPClearTime) >= VIPClearCooldownTime){
             board = filledBoard(0, cols, rows);
             io.emit('updateBoard', {
                 board: board
             });
+            socket.VIPClearTime = serverTime;
+            console.log('VIP CLEARED!');
         }
     });
 
@@ -206,3 +217,8 @@ function clearVoteCountDown() {
         }
     }
 }
+
+function serverTick(){
+    serverTime++;
+}
+setInterval(serverTick, 1000);
