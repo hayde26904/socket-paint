@@ -195,14 +195,6 @@ document.addEventListener('keydown', function (event) {
     }
 });
 
-//I know this is bad practice but I'm lazy and this is a small project so Ise number keys to change color.'m not going to bother with a better solution
-//I'm sorry for my sins but I'm not sorry enough to fix them :( - Ben
-//I want to die - Ben
-//I'm sorry for my sins but I'm not sorry enough to fix them :( - Ben
-//i kicked ben from the server - ben
-//my balls itch and they bring me pain - ben
-//my balls itch and they grow at an exponential rate - ben
-
 document.addEventListener('mousemove', function (event) {
 
     oldMouseCellX = mouseCellX;
